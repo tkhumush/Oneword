@@ -26,9 +26,11 @@ export function getNDK(): NDK {
   return ndkInstance;
 }
 
-export async function connectNDK(): Promise<NDK> {
+export function connectNDK(): NDK {
   const ndk = getNDK();
-  await ndk.connect();
+  // Don't await - NDK manages relay connections in the background.
+  // Subsequent operations (fetchEvents, publish) wait for available relays.
+  ndk.connect();
   return ndk;
 }
 
