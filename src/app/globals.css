@@ -85,14 +85,52 @@ body {
     hover:bg-white/5 active:bg-white/10 transition-colors min-w-[72px];
 }
 
-/* Speed reading word */
+/* Speed reading — ORP (Optimal Recognition Point) display */
+.orp-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 120px;
+}
+
+.orp-focal-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
 .speed-word {
   font-size: clamp(2.5rem, 8vw, 5rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  text-align: center;
   font-family: "Georgia", "Times New Roman", serif;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.orp-before {
+  color: rgba(255, 255, 255, 0.85);
+  text-align: right;
+}
+
+.orp-pivot {
+  color: #ffffff;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+  text-underline-offset: 4px;
+}
+
+.orp-after {
+  color: rgba(255, 255, 255, 0.85);
+  text-align: left;
 }
 
 /* WPM Slider */

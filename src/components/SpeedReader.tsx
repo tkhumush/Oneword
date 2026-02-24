@@ -9,6 +9,33 @@ interface ContentBlock {
   content: string; // words for text, url for image
 }
 
+/**
+ * Calculate the Optimal Recognition Point (ORP) index for a word.
+ * This is the character where the eye naturally focuses.
+ * Based on the Spritz algorithm used in rsvp-reading and OpenSpritz.
+ */
+function getORPIndex(word: string): number {
+  const len = word.length;
+  if (len <= 1) return 0;
+  if (len <= 5) return 1;
+  if (len <= 9) return 2;
+  if (len <= 13) return 3;
+  return 4;
+}
+
+/**
+ * Calculate display duration multiplier for a word based on punctuation.
+ * Words ending in sentence-ending punctuation get extra time.
+ */
+function getWordDelay(word: string): number {
+  const lastChar = word[word.length - 1];
+  if (".!?".includes(lastChar)) return 2.5; // sentence end — long pause
+  if (",;:".includes(lastChar)) return 1.6; // clause break — medium pause
+  if ("-–—".includes(lastChar)) return 1.3; // dash — slight pause
+  if (word.length > 10) return 1.2; // long words — slight extra time
+  return 1.0;
+}
+
 function parseContentBlocks(markdown: string): ContentBlock[] {
   const blocks: ContentBlock[] = [];
   // Split on image markdown syntax
@@ -43,7 +70,9 @@ function parseContentBlocks(markdown: string): ContentBlock[] {
   return blocks;
 }
 
-function getAllWords(blocks: ContentBlock[]): (string | { type: "image"; url: string })[] {
+function getAllWords(
+  blocks: ContentBlock[]
+): (string | { type: "image"; url: string })[] {
   const items: (string | { type: "image"; url: string })[] = [];
   for (const block of blocks) {
     if (block.type === "image") {
@@ -54,6 +83,23 @@ function getAllWords(blocks: ContentBlock[]): (string | { type: "image"; url: st
     }
   }
   return items;
+}
+
+/** Renders a word with the ORP (pivot) letter highlighted */
+function ORPWord({ word }: { word: string }) {
+  if (!word) return null;
+  const orpIdx = getORPIndex(word);
+  const before = word.slice(0, orpIdx);
+  const pivot = word[orpIdx];
+  const after = word.slice(orpIdx + 1);
+
+  return (
+    <div className="speed-word select-none flex items-baseline justify-center">
+      <span className="orp-before">{before}</span>
+      <span className="orp-pivot">{pivot}</span>
+      <span className="orp-after">{after}</span>
+    </div>
+  );
 }
 
 export default function SpeedReader() {
@@ -73,7 +119,9 @@ export default function SpeedReader() {
   const [isPaused, setIsPaused] = useState(false);
   const [showImage, setShowImage] = useState<string | null>(null);
   const [isFinished, setIsFinished] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPlayingRef = useRef(false);
+  const currentIndexRef = useRef(0);
 
   useEffect(() => {
     if (activeArticle) {
@@ -83,36 +131,55 @@ export default function SpeedReader() {
     }
   }, [activeArticle]);
 
+  // Keep refs in sync
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
   const clearTimer = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
   }, []);
 
-  const advance = useCallback(() => {
-    setCurrentIndex((prev) => {
-      const next = prev + 1;
-      if (next >= items.length) {
-        clearTimer();
+  const scheduleNext = useCallback(
+    (idx: number) => {
+      if (idx >= items.length) {
         setIsPlaying(false);
         setIsFinished(true);
-        return prev;
+        return;
       }
 
-      const nextItem = items[next];
-      if (typeof nextItem === "object" && nextItem.type === "image") {
-        // Pause at image
-        clearTimer();
+      const item = items[idx];
+
+      // If it's an image, pause
+      if (typeof item === "object" && item.type === "image") {
+        setCurrentIndex(idx);
         setIsPlaying(false);
         setIsPaused(true);
-        setShowImage(nextItem.url);
-        return next;
+        setShowImage(item.url);
+        return;
       }
 
-      return next;
-    });
-  }, [items, clearTimer]);
+      setCurrentIndex(idx);
+
+      // Calculate delay for this specific word (smart punctuation pausing)
+      const baseMs = 60000 / speedWPM;
+      const word = item as string;
+      const delay = baseMs * getWordDelay(word);
+
+      timerRef.current = setTimeout(() => {
+        if (isPlayingRef.current) {
+          scheduleNext(idx + 1);
+        }
+      }, delay);
+    },
+    [items, speedWPM]
+  );
 
   const startReading = useCallback(() => {
     if (items.length === 0) return;
@@ -120,30 +187,25 @@ export default function SpeedReader() {
     setIsPaused(false);
     setIsPlaying(true);
     setIsFinished(false);
-
-    const msPerWord = 60000 / speedWPM;
     clearTimer();
-    intervalRef.current = setInterval(advance, msPerWord);
-  }, [items, speedWPM, advance, clearTimer]);
+
+    // Start from current position or beginning
+    const startIdx = currentIndexRef.current > 0 ? currentIndexRef.current : 0;
+    scheduleNext(startIdx);
+  }, [items, clearTimer, scheduleNext]);
 
   const skipImage = useCallback(() => {
     setShowImage(null);
-    // Move past the image and continue
-    setCurrentIndex((prev) => {
-      const next = prev + 1;
-      if (next >= items.length) {
-        setIsFinished(true);
-        return prev;
-      }
-      return next;
-    });
-    // Resume playback
-    const msPerWord = 60000 / speedWPM;
-    clearTimer();
+    const nextIdx = currentIndexRef.current + 1;
+    if (nextIdx >= items.length) {
+      setIsFinished(true);
+      return;
+    }
     setIsPlaying(true);
     setIsPaused(false);
-    intervalRef.current = setInterval(advance, msPerWord);
-  }, [speedWPM, items.length, advance, clearTimer]);
+    clearTimer();
+    scheduleNext(nextIdx);
+  }, [items.length, clearTimer, scheduleNext]);
 
   const pauseReading = useCallback(() => {
     clearTimer();
@@ -155,24 +217,23 @@ export default function SpeedReader() {
     if (showImage) return;
     setIsPaused(false);
     setIsPlaying(true);
-    const msPerWord = 60000 / speedWPM;
     clearTimer();
-    intervalRef.current = setInterval(advance, msPerWord);
-  }, [showImage, speedWPM, advance, clearTimer]);
+    scheduleNext(currentIndexRef.current + 1);
+  }, [showImage, clearTimer, scheduleNext]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => clearTimer();
   }, [clearTimer]);
 
-  // Restart timer when WPM changes during playback
+  // When WPM changes mid-playback, restart scheduling from current word
   useEffect(() => {
     if (isPlaying && !showImage) {
       clearTimer();
-      const msPerWord = 60000 / speedWPM;
-      intervalRef.current = setInterval(advance, msPerWord);
+      scheduleNext(currentIndexRef.current + 1);
     }
-  }, [speedWPM, isPlaying, showImage, advance, clearTimer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speedWPM]);
 
   if (!activeArticle) return null;
 
@@ -245,7 +306,11 @@ export default function SpeedReader() {
             </button>
           </div>
         ) : (
-          <div className="speed-word select-none">{currentWord}</div>
+          <div className="orp-container">
+            {/* Fixed focal line */}
+            <div className="orp-focal-line" />
+            <ORPWord word={currentWord} />
+          </div>
         )}
       </div>
 
@@ -257,10 +322,10 @@ export default function SpeedReader() {
             <button
               onClick={() => {
                 clearTimer();
-                setCurrentIndex(Math.max(0, currentIndex - 10));
+                const newIdx = Math.max(0, currentIndex - 10);
+                setCurrentIndex(newIdx);
                 if (isPlaying) {
-                  const msPerWord = 60000 / speedWPM;
-                  intervalRef.current = setInterval(advance, msPerWord);
+                  scheduleNext(newIdx + 1);
                 }
               }}
               className="btn-control"
@@ -285,11 +350,10 @@ export default function SpeedReader() {
             <button
               onClick={() => {
                 clearTimer();
-                const nextIdx = Math.min(items.length - 1, currentIndex + 10);
-                setCurrentIndex(nextIdx);
+                const newIdx = Math.min(items.length - 1, currentIndex + 10);
+                setCurrentIndex(newIdx);
                 if (isPlaying) {
-                  const msPerWord = 60000 / speedWPM;
-                  intervalRef.current = setInterval(advance, msPerWord);
+                  scheduleNext(newIdx + 1);
                 }
               }}
               className="btn-control"
