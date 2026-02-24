@@ -104,53 +104,6 @@ function parseLongFormEvent(event: NDKEvent): LongFormNote {
   };
 }
 
-export async function fetchLatestLongForm(limit = 20): Promise<LongFormNote[]> {
-  const ndk = getNDK();
-  const filter: NDKFilter = {
-    kinds: [30023 as NDKKind],
-    limit: limit * 3,
-  };
-
-  const events = await new Promise<Set<NDKEvent>>((resolve) => {
-    const collected = new Set<NDKEvent>();
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-
-    const sub = ndk.subscribe(filter, { closeOnEose: false });
-
-    sub.on("event", (event: NDKEvent) => {
-      collected.add(event);
-    });
-
-    // When any relay signals end-of-stored-events, wait 500ms then stop
-    sub.on("eose", () => {
-      if (!timeout) {
-        timeout = setTimeout(() => {
-          sub.stop();
-          resolve(collected);
-        }, 500);
-      }
-    });
-  });
-
-  const notes = Array.from(events)
-    .map(parseLongFormEvent)
-    .filter((n) => n.content.length > 0);
-
-  // Deduplicate by author + identifier (d tag), keeping the newest version
-  const seen = new Map<string, LongFormNote>();
-  for (const note of notes) {
-    const key = `${note.pubkey}:${note.identifier}`;
-    const existing = seen.get(key);
-    if (!existing || note.publishedAt > existing.publishedAt) {
-      seen.set(key, note);
-    }
-  }
-
-  return Array.from(seen.values())
-    .sort((a, b) => b.publishedAt - a.publishedAt)
-    .slice(0, limit);
-}
-
 export async function fetchFollowingLongForm(
   user: NDKUser,
   limit = 10

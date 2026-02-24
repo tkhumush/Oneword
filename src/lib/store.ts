@@ -9,10 +9,8 @@ interface AppState {
   setUser: (user: NDKUser | null) => void;
   setConnected: (connected: boolean) => void;
 
-  // Feeds
-  latestNotes: LongFormNote[];
+  // Feed
   followingNotes: LongFormNote[];
-  setLatestNotes: (notes: LongFormNote[]) => void;
   setFollowingNotes: (notes: LongFormNote[]) => void;
 
   // Active article
@@ -25,14 +23,8 @@ interface AppState {
   setSpeedReading: (active: boolean) => void;
   setSpeedWPM: (wpm: number) => void;
 
-  // Active feed tab
-  activeTab: "latest" | "following";
-  setActiveTab: (tab: "latest" | "following") => void;
-
-  // Loading states
-  isLoadingLatest: boolean;
+  // Loading state
   isLoadingFollowing: boolean;
-  setLoadingLatest: (loading: boolean) => void;
   setLoadingFollowing: (loading: boolean) => void;
 }
 
@@ -42,9 +34,7 @@ export const useStore = create<AppState>((set) => ({
   setUser: (user) => set({ user }),
   setConnected: (connected) => set({ isConnected: connected }),
 
-  latestNotes: [],
   followingNotes: [],
-  setLatestNotes: (notes) => set({ latestNotes: notes }),
   setFollowingNotes: (notes) => set({ followingNotes: notes }),
 
   activeArticle: null,
@@ -55,11 +45,6 @@ export const useStore = create<AppState>((set) => ({
   setSpeedReading: (active) => set({ isSpeedReading: active }),
   setSpeedWPM: (wpm) => set({ speedWPM: wpm }),
 
-  activeTab: "latest",
-  setActiveTab: (tab) => set({ activeTab: tab }),
-
-  isLoadingLatest: false,
   isLoadingFollowing: false,
-  setLoadingLatest: (loading) => set({ isLoadingLatest: loading }),
   setLoadingFollowing: (loading) => set({ isLoadingFollowing: loading }),
 }));
