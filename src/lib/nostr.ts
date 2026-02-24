@@ -111,7 +111,27 @@ export async function fetchLatestLongForm(limit = 20): Promise<LongFormNote[]> {
     limit: limit * 3,
   };
 
-  const events = await ndk.fetchEvents(filter);
+  const events = await new Promise<Set<NDKEvent>>((resolve) => {
+    const collected = new Set<NDKEvent>();
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    const sub = ndk.subscribe(filter, { closeOnEose: false });
+
+    sub.on("event", (event: NDKEvent) => {
+      collected.add(event);
+    });
+
+    // When any relay signals end-of-stored-events, wait 500ms then stop
+    sub.on("eose", () => {
+      if (!timeout) {
+        timeout = setTimeout(() => {
+          sub.stop();
+          resolve(collected);
+        }, 500);
+      }
+    });
+  });
+
   const notes = Array.from(events)
     .map(parseLongFormEvent)
     .filter((n) => n.content.length > 0);
