@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Oneword — Speed Read Nostr",
-  description: "Speed read long-form nostr content, one word at a time.",
+  title: "tl;sr — Speed Read Nostr",
+  description: "Too long; speed read. Nostr long-form content, one word at a time.",
 };
 
 export default function RootLayout({
