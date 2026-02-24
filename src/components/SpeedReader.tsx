@@ -259,7 +259,7 @@ export default function SpeedReader() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-[85dvh] flex flex-col">
       {/* Header */}
       <header className="bg-black border-b border-white/10 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
@@ -290,21 +290,16 @@ export default function SpeedReader() {
             <img
               src={showImage}
               alt=""
-              className="max-w-full max-h-[60vh] rounded-lg"
+              className="max-w-full max-h-[50vh] rounded-lg"
             />
             <button onClick={skipImage} className="btn-skip">
               Skip &rarr;
             </button>
           </div>
         ) : !isPlaying && !isPaused ? (
-          <div className="flex flex-col items-center gap-8">
-            <h2 className="text-xl text-white/60 text-center leading-relaxed">
-              {activeArticle.title}
-            </h2>
-            <button onClick={startReading} className="btn-play">
-              Play
-            </button>
-          </div>
+          <h2 className="text-xl text-white/60 text-center leading-relaxed px-4">
+            {activeArticle.title}
+          </h2>
         ) : (
           <div className="orp-container">
             {/* Fixed focal line */}
