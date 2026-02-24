@@ -117,24 +117,27 @@ body {
   letter-spacing: -0.02em;
   line-height: 1.1;
   font-family: "Georgia", "Times New Roman", serif;
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
+  width: 100%;
 }
 
 .orp-before {
+  flex: 1;
   color: rgba(255, 255, 255, 0.85);
   text-align: right;
 }
 
 .orp-pivot {
-  color: #ffffff;
+  color: #0d9488;
   font-weight: 800;
   text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.5);
+  text-decoration-color: rgba(13, 148, 136, 0.5);
   text-underline-offset: 4px;
 }
 
 .orp-after {
+  flex: 1;
   color: rgba(255, 255, 255, 0.85);
   text-align: left;
 }
