@@ -1,93 +1,138 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useStore } from "@/lib/store";
-import { fetchArticleById } from "@/lib/nostr";
+import {
+  fetchLatestLongForm,
+  fetchFollowingLongForm,
+} from "@/lib/nostr";
+import NoteCard from "./NoteCard";
 
 export default function FeedView() {
   const {
     user,
+    activeTab,
+    setActiveTab,
+    latestNotes,
+    followingNotes,
+    setLatestNotes,
+    setFollowingNotes,
+    isLoadingLatest,
+    isLoadingFollowing,
+    setLoadingLatest,
+    setLoadingFollowing,
     setUser,
     setConnected,
-    setActiveArticle,
-    isSearching,
-    setSearching,
-    searchError,
-    setSearchError,
   } = useStore();
 
-  const [searchInput, setSearchInput] = useState("");
+  useEffect(() => {
+    loadLatest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "following" && user && followingNotes.length === 0) {
+      loadFollowing();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user]);
+
+  async function loadLatest() {
+    setLoadingLatest(true);
+    try {
+      const notes = await fetchLatestLongForm(20);
+      setLatestNotes(notes);
+    } catch (e) {
+      console.error("Failed to fetch latest:", e);
+    } finally {
+      setLoadingLatest(false);
+    }
+  }
+
+  async function loadFollowing() {
+    if (!user) return;
+    setLoadingFollowing(true);
+    try {
+      const notes = await fetchFollowingLongForm(user, 10);
+      setFollowingNotes(notes);
+    } catch (e) {
+      console.error("Failed to fetch following:", e);
+    } finally {
+      setLoadingFollowing(false);
+    }
+  }
 
   function handleLogout() {
     setUser(null);
     setConnected(false);
   }
 
-  async function handleSearch() {
-    const id = searchInput.trim();
-    if (!id) return;
-
-    setSearching(true);
-    setSearchError(null);
-    try {
-      const article = await fetchArticleById(id);
-      if (article) {
-        setActiveArticle(article);
-      } else {
-        setSearchError("No article found with that ID.");
-      }
-    } catch (e) {
-      console.error("Search failed:", e);
-      setSearchError("Search failed. Please try again.");
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  }
+  const notes = activeTab === "latest" ? latestNotes : followingNotes;
+  const loading = activeTab === "latest" ? isLoadingLatest : isLoadingFollowing;
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-black border-b border-white/10 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold tracking-tight shrink-0">Oneword</h1>
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Enter article ID..."
-              className="flex-1 bg-white/10 text-white text-sm rounded-lg px-3 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-white/30"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={isSearching || !searchInput.trim()}
-              className="text-sm text-white/60 hover:text-white disabled:text-white/20 shrink-0"
-            >
-              {isSearching ? "..." : "Search"}
-            </button>
-          </div>
-          <button onClick={handleLogout} className="text-white/40 text-sm hover:text-white/70 shrink-0">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <h1 className="text-xl font-bold tracking-tight">Oneword</h1>
+          <button onClick={handleLogout} className="text-white/40 text-sm hover:text-white/70">
             {user ? "Logout" : "Back"}
           </button>
         </div>
       </header>
 
-      {/* Content */}
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 flex items-center justify-center">
-        {searchError ? (
-          <p className="text-white/40 text-center">{searchError}</p>
-        ) : (
-          <p className="text-white/30 text-center text-sm">
-            Search for an article by entering its Nostr event ID above.
+      {/* Tab bar */}
+      <div className="border-b border-white/10">
+        <div className="max-w-2xl mx-auto flex">
+          <button
+            onClick={() => setActiveTab("latest")}
+            className={`flex-1 py-3 text-center text-sm font-medium transition-colors ${
+              activeTab === "latest"
+                ? "text-white border-b-2 border-white"
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Latest
+          </button>
+          <button
+            onClick={() => setActiveTab("following")}
+            className={`flex-1 py-3 text-center text-sm font-medium transition-colors ${
+              activeTab === "following"
+                ? "text-white border-b-2 border-white"
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Following
+          </button>
+        </div>
+      </div>
+
+      {/* Feed */}
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-4">
+        {activeTab === "following" && !user && (
+          <p className="text-white/40 text-center py-12">
+            Login to see posts from people you follow.
           </p>
         )}
+
+        {loading && (
+          <div className="flex justify-center py-12">
+            <div className="text-white/40 animate-pulse">Loading articles...</div>
+          </div>
+        )}
+
+        {!loading && notes.length === 0 && (activeTab === "latest" || user) && (
+          <p className="text-white/40 text-center py-12">
+            No articles found.
+          </p>
+        )}
+
+        <div className="flex flex-col gap-1">
+          {notes.map((note) => (
+            <NoteCard key={note.id} note={note} />
+          ))}
+        </div>
       </div>
     </div>
   );

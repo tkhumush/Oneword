@@ -104,20 +104,90 @@ function parseLongFormEvent(event: NDKEvent): LongFormNote {
   };
 }
 
-export async function fetchArticleById(id: string): Promise<LongFormNote | null> {
+export async function fetchLatestLongForm(limit = 20): Promise<LongFormNote[]> {
+  const ndk = getNDK();
+  const filter: NDKFilter = {
+    kinds: [30023 as NDKKind],
+    limit: limit * 3,
+  };
+
+  const events = await new Promise<Set<NDKEvent>>((resolve) => {
+    const collected = new Set<NDKEvent>();
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    const sub = ndk.subscribe(filter, { closeOnEose: false });
+
+    sub.on("event", (event: NDKEvent) => {
+      collected.add(event);
+    });
+
+    // When any relay signals end-of-stored-events, wait 500ms then stop
+    sub.on("eose", () => {
+      if (!timeout) {
+        timeout = setTimeout(() => {
+          sub.stop();
+          resolve(collected);
+        }, 500);
+      }
+    });
+  });
+
+  const notes = Array.from(events)
+    .map(parseLongFormEvent)
+    .filter((n) => n.content.length > 0);
+
+  // Deduplicate by author + identifier (d tag), keeping the newest version
+  const seen = new Map<string, LongFormNote>();
+  for (const note of notes) {
+    const key = `${note.pubkey}:${note.identifier}`;
+    const existing = seen.get(key);
+    if (!existing || note.publishedAt > existing.publishedAt) {
+      seen.set(key, note);
+    }
+  }
+
+  return Array.from(seen.values())
+    .sort((a, b) => b.publishedAt - a.publishedAt)
+    .slice(0, limit);
+}
+
+export async function fetchFollowingLongForm(
+  user: NDKUser,
+  limit = 10
+): Promise<LongFormNote[]> {
   const ndk = getNDK();
 
-  // Try fetching by event ID
+  // Fetch the user's contact list (kind 3)
+  const contactListEvents = await ndk.fetchEvents({
+    kinds: [3 as NDKKind],
+    authors: [user.pubkey],
+    limit: 1,
+  });
+
+  const contactEvent = Array.from(contactListEvents)[0];
+  if (!contactEvent) return [];
+
+  const followPubkeys = contactEvent.tags
+    .filter((t) => t[0] === "p")
+    .map((t) => t[1]);
+
+  if (followPubkeys.length === 0) return [];
+
+  // Fetch long form posts from followed users
   const filter: NDKFilter = {
-    ids: [id],
+    kinds: [30023 as NDKKind],
+    authors: followPubkeys,
+    limit: limit * 2,
   };
 
   const events = await ndk.fetchEvents(filter);
-  const event = Array.from(events)[0];
-  if (!event) return null;
+  const notes = Array.from(events)
+    .map(parseLongFormEvent)
+    .filter((n) => n.content.length > 0)
+    .sort((a, b) => b.publishedAt - a.publishedAt)
+    .slice(0, limit);
 
-  const note = parseLongFormEvent(event);
-  return note.content.length > 0 ? note : null;
+  return notes;
 }
 
 export async function fetchUserProfile(

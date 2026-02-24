@@ -9,6 +9,12 @@ interface AppState {
   setUser: (user: NDKUser | null) => void;
   setConnected: (connected: boolean) => void;
 
+  // Feeds
+  latestNotes: LongFormNote[];
+  followingNotes: LongFormNote[];
+  setLatestNotes: (notes: LongFormNote[]) => void;
+  setFollowingNotes: (notes: LongFormNote[]) => void;
+
   // Active article
   activeArticle: LongFormNote | null;
   setActiveArticle: (article: LongFormNote | null) => void;
@@ -19,11 +25,15 @@ interface AppState {
   setSpeedReading: (active: boolean) => void;
   setSpeedWPM: (wpm: number) => void;
 
-  // Search
-  isSearching: boolean;
-  setSearching: (searching: boolean) => void;
-  searchError: string | null;
-  setSearchError: (error: string | null) => void;
+  // Active feed tab
+  activeTab: "latest" | "following";
+  setActiveTab: (tab: "latest" | "following") => void;
+
+  // Loading states
+  isLoadingLatest: boolean;
+  isLoadingFollowing: boolean;
+  setLoadingLatest: (loading: boolean) => void;
+  setLoadingFollowing: (loading: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -31,6 +41,11 @@ export const useStore = create<AppState>((set) => ({
   isConnected: false,
   setUser: (user) => set({ user }),
   setConnected: (connected) => set({ isConnected: connected }),
+
+  latestNotes: [],
+  followingNotes: [],
+  setLatestNotes: (notes) => set({ latestNotes: notes }),
+  setFollowingNotes: (notes) => set({ followingNotes: notes }),
 
   activeArticle: null,
   setActiveArticle: (article) => set({ activeArticle: article }),
@@ -40,8 +55,11 @@ export const useStore = create<AppState>((set) => ({
   setSpeedReading: (active) => set({ isSpeedReading: active }),
   setSpeedWPM: (wpm) => set({ speedWPM: wpm }),
 
-  isSearching: false,
-  setSearching: (searching) => set({ isSearching: searching }),
-  searchError: null,
-  setSearchError: (error) => set({ searchError: error }),
+  activeTab: "latest",
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  isLoadingLatest: false,
+  isLoadingFollowing: false,
+  setLoadingLatest: (loading) => set({ isLoadingLatest: loading }),
+  setLoadingFollowing: (loading) => set({ isLoadingFollowing: loading }),
 }));
