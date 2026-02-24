@@ -302,7 +302,7 @@ export default function SpeedReader() {
               {activeArticle.title}
             </h2>
             <button onClick={startReading} className="btn-play">
-              &#9654; Play
+              Play
             </button>
           </div>
         ) : (
@@ -331,19 +331,19 @@ export default function SpeedReader() {
               className="btn-control"
               title="Back 10 words"
             >
-              &#9194;
+              Back
             </button>
 
             {isPlaying ? (
               <button onClick={pauseReading} className="btn-play-control">
-                &#9646;&#9646;
+                Pause
               </button>
             ) : (
               <button
                 onClick={isPaused ? resumeReading : startReading}
                 className="btn-play-control"
               >
-                &#9654;
+                Play
               </button>
             )}
 
@@ -359,7 +359,7 @@ export default function SpeedReader() {
               className="btn-control"
               title="Forward 10 words"
             >
-              &#9193;
+              Skip
             </button>
           </div>
 
@@ -484,25 +484,21 @@ function FinishedView({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <div className="flex gap-4 mb-10">
+      <div className="action-bar mb-10">
         <button onClick={handleLike} className="btn-action-lg">
-          <span className="text-3xl">&#9825;</span>
-          <span className="text-xs">Like</span>
+          Like
         </button>
         <button
           onClick={() => setShowComment(!showComment)}
           className="btn-action-lg"
         >
-          <span className="text-3xl">&#9998;</span>
-          <span className="text-xs">Comment</span>
+          Comment
         </button>
         <button onClick={handleZap} className="btn-action-lg">
-          <span className="text-3xl">&#9889;</span>
-          <span className="text-xs">Zap</span>
+          Zap
         </button>
         <button onClick={handleShare} className="btn-action-lg">
-          <span className="text-3xl">&#8599;</span>
-          <span className="text-xs">Share</span>
+          Share
         </button>
       </div>
 

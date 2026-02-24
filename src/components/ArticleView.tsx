@@ -116,7 +116,7 @@ export default function ArticleView() {
             onClick={() => setSpeedReading(true)}
             className="btn-speed"
           >
-            &#9654; Speed Read
+            Speed Read
           </button>
         </div>
       </header>
@@ -213,25 +213,21 @@ export default function ArticleView() {
             </div>
           )}
 
-          <div className="flex gap-3 justify-center">
+          <div className="action-bar">
             <button onClick={handleLike} className="btn-action-lg">
-              <span className="text-2xl">&#9825;</span>
-              <span className="text-xs">Like</span>
+              Like
             </button>
             <button
               onClick={() => setShowComment(!showComment)}
               className="btn-action-lg"
             >
-              <span className="text-2xl">&#9998;</span>
-              <span className="text-xs">Comment</span>
+              Comment
             </button>
             <button onClick={handleZap} className="btn-action-lg">
-              <span className="text-2xl">&#9889;</span>
-              <span className="text-xs">Zap</span>
+              Zap
             </button>
             <button onClick={handleShare} className="btn-action-lg">
-              <span className="text-2xl">&#8599;</span>
-              <span className="text-xs">Share</span>
+              Share
             </button>
           </div>
         </div>
