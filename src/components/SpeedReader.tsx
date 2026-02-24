@@ -102,6 +102,44 @@ function ORPWord({ word }: { word: string }) {
   );
 }
 
+/** Build a context strip of surrounding words */
+function ContextStrip({
+  items,
+  currentIndex,
+}: {
+  items: (string | { type: "image"; url: string })[];
+  currentIndex: number;
+}) {
+  const wordItems = items.filter((it): it is string => typeof it === "string");
+  // Map currentIndex to word-only index
+  let wordIdx = 0;
+  for (let i = 0; i < currentIndex && i < items.length; i++) {
+    if (typeof items[i] === "string") wordIdx++;
+  }
+
+  const radius = 6;
+  const start = Math.max(0, wordIdx - radius);
+  const end = Math.min(wordItems.length, wordIdx + radius + 1);
+  const visible = wordItems.slice(start, end);
+
+  return (
+    <div className="text-xs text-white/20 text-center leading-relaxed px-8 max-w-md mx-auto select-none">
+      {visible.map((w, i) => {
+        const absIdx = start + i;
+        const isCurrent = absIdx === wordIdx;
+        return (
+          <span
+            key={absIdx}
+            className={isCurrent ? "text-white/60 font-medium" : ""}
+          >
+            {w}{" "}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SpeedReader() {
   const {
     activeArticle,
@@ -119,9 +157,16 @@ export default function SpeedReader() {
   const [isPaused, setIsPaused] = useState(false);
   const [showImage, setShowImage] = useState<string | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [scrubbing, setScrubbing] = useState<"left" | "right" | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPlayingRef = useRef(false);
   const currentIndexRef = useRef(0);
+  const touchStartX = useRef(0);
+  const touchActive = useRef(false);
+  const wasPlayingBeforeTouch = useRef(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrubThreshold = 25; // px per word
 
   useEffect(() => {
     if (activeArticle) {
@@ -144,6 +189,12 @@ export default function SpeedReader() {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+  }, []);
+
+  const showHint = useCallback((text: string) => {
+    setHint(text);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 1500);
   }, []);
 
   const scheduleNext = useCallback(
@@ -181,19 +232,6 @@ export default function SpeedReader() {
     [items, speedWPM]
   );
 
-  const startReading = useCallback(() => {
-    if (items.length === 0) return;
-    setShowImage(null);
-    setIsPaused(false);
-    setIsPlaying(true);
-    setIsFinished(false);
-    clearTimer();
-
-    // Start from current position or beginning
-    const startIdx = currentIndexRef.current > 0 ? currentIndexRef.current : 0;
-    scheduleNext(startIdx);
-  }, [items, clearTimer, scheduleNext]);
-
   const skipImage = useCallback(() => {
     setShowImage(null);
     const nextIdx = currentIndexRef.current + 1;
@@ -207,23 +245,131 @@ export default function SpeedReader() {
     scheduleNext(nextIdx);
   }, [items.length, clearTimer, scheduleNext]);
 
-  const pauseReading = useCallback(() => {
+  // Touch handlers
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (showImage) return;
+      touchStartX.current = e.touches[0].clientX;
+      touchActive.current = true;
+      wasPlayingBeforeTouch.current = isPlayingRef.current;
+      setScrubbing(null);
+
+      // Start playing on touch
+      if (items.length === 0) return;
+      if (!isPlayingRef.current) {
+        setShowImage(null);
+        setIsPaused(false);
+        setIsPlaying(true);
+        setIsFinished(false);
+        clearTimer();
+        const startIdx =
+          currentIndexRef.current > 0 ? currentIndexRef.current : 0;
+        scheduleNext(startIdx);
+      }
+    },
+    [showImage, items.length, clearTimer, scheduleNext]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchActive.current || showImage) return;
+      const deltaX = e.touches[0].clientX - touchStartX.current;
+      const wordOffset = Math.floor(Math.abs(deltaX) / scrubThreshold);
+
+      if (wordOffset > 0) {
+        // Pause while scrubbing
+        if (isPlayingRef.current) {
+          clearTimer();
+          setIsPlaying(false);
+          setIsPaused(true);
+        }
+
+        if (deltaX < 0) {
+          // Slide left → rewind
+          setScrubbing("left");
+          const newIdx = Math.max(
+            0,
+            currentIndexRef.current - wordOffset
+          );
+          setCurrentIndex(newIdx);
+        } else {
+          // Slide right → skip forward
+          setScrubbing("right");
+          const newIdx = Math.min(
+            items.length - 1,
+            currentIndexRef.current + wordOffset
+          );
+          setCurrentIndex(newIdx);
+        }
+      }
+    },
+    [showImage, items.length, clearTimer, scrubThreshold]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchActive.current) return;
+    touchActive.current = false;
+    setScrubbing(null);
+
+    // Lift finger → pause
     clearTimer();
     setIsPlaying(false);
-    setIsPaused(true);
+    if (currentIndexRef.current > 0 || wasPlayingBeforeTouch.current) {
+      setIsPaused(true);
+    }
   }, [clearTimer]);
 
-  const resumeReading = useCallback(() => {
-    if (showImage) return;
-    setIsPaused(false);
-    setIsPlaying(true);
-    clearTimer();
-    scheduleNext(currentIndexRef.current + 1);
-  }, [showImage, clearTimer, scheduleNext]);
+  // Keyboard handlers
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (isPlayingRef.current) {
+          clearTimer();
+          setIsPlaying(false);
+          setIsPaused(true);
+        } else {
+          if (items.length === 0) return;
+          setShowImage(null);
+          setIsPaused(false);
+          setIsPlaying(true);
+          setIsFinished(false);
+          clearTimer();
+          const startIdx =
+            currentIndexRef.current > 0 ? currentIndexRef.current : 0;
+          scheduleNext(startIdx);
+        }
+      } else if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        clearTimer();
+        const newIdx = Math.max(0, currentIndexRef.current - 5);
+        setCurrentIndex(newIdx);
+        setIsPlaying(false);
+        setIsPaused(true);
+        showHint(`\u2190 ${currentIndexRef.current - newIdx} words`);
+      } else if (e.code === "ArrowRight") {
+        e.preventDefault();
+        clearTimer();
+        const newIdx = Math.min(items.length - 1, currentIndexRef.current + 5);
+        setCurrentIndex(newIdx);
+        setIsPlaying(false);
+        setIsPaused(true);
+        showHint(`${newIdx - currentIndexRef.current} words \u2192`);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [items, clearTimer, scheduleNext, showHint]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => clearTimer();
+    return () => {
+      clearTimer();
+      if (hintTimer.current) clearTimeout(hintTimer.current);
+    };
   }, [clearTimer]);
 
   // When WPM changes mid-playback, restart scheduling from current word
@@ -283,8 +429,14 @@ export default function SpeedReader() {
         />
       </div>
 
-      {/* Main display area */}
-      <div className="flex-1 flex items-center justify-center px-6">
+      {/* Touch / display area */}
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-6 select-none touch-none cursor-pointer touch-dots"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+      >
         {showImage ? (
           <div className="flex flex-col items-center gap-8">
             <img
@@ -297,95 +449,72 @@ export default function SpeedReader() {
             </button>
           </div>
         ) : !isPlaying && !isPaused ? (
-          <h2 className="text-xl text-white/60 text-center leading-relaxed px-4">
-            {activeArticle.title}
-          </h2>
-        ) : (
-          <div className="orp-container">
-            {/* Fixed focal line */}
-            <div className="orp-focal-line" />
-            <ORPWord word={currentWord} />
+          <div className="flex flex-col items-center gap-6">
+            <h2 className="text-xl text-white/60 text-center leading-relaxed px-4">
+              {activeArticle.title}
+            </h2>
+            <p className="text-xs text-white/20">Touch or press space to start</p>
           </div>
+        ) : (
+          <>
+            <div className="orp-container">
+              <div className="orp-focal-line" />
+              <ORPWord word={currentWord} />
+            </div>
+
+            {/* Scrub direction indicator */}
+            {scrubbing && (
+              <p className="text-xs text-white/30 mt-4">
+                {scrubbing === "left" ? "\u25C0 rewinding" : "skipping \u25B6"}
+              </p>
+            )}
+
+            {/* Keyboard hint */}
+            {hint && (
+              <p className="text-xs text-white/30 mt-4">{hint}</p>
+            )}
+
+            {/* Context strip */}
+            <div className="mt-6">
+              <ContextStrip items={items} currentIndex={currentIndex} />
+            </div>
+
+            {/* Paused indicator */}
+            {isPaused && !scrubbing && (
+              <p className="text-xs text-white/20 mt-4">paused</p>
+            )}
+          </>
         )}
       </div>
 
-      {/* Controls */}
-      <div className="bg-black border-t border-white/10 px-4 py-5">
-        <div className="max-w-2xl mx-auto">
-          {/* Playback controls */}
-          <div className="grid grid-cols-3 gap-3 mb-5 max-w-xs mx-auto">
+      {/* WPM control */}
+      <div className="bg-black border-t border-white/10 px-4 py-3">
+        <div className="max-w-2xl mx-auto flex items-center justify-center gap-4">
+          <span className="text-xs text-white/30 w-16 text-right">
+            {speedWPM} WPM
+          </span>
+          <input
+            type="range"
+            min="100"
+            max="1000"
+            step="25"
+            value={speedWPM}
+            onChange={(e) => setSpeedWPM(parseInt(e.target.value))}
+            className="wpm-slider flex-1 max-w-xs"
+          />
+          <div className="flex gap-2">
             <button
-              onClick={() => {
-                clearTimer();
-                const newIdx = Math.max(0, currentIndex - 10);
-                setCurrentIndex(newIdx);
-                if (isPlaying) {
-                  scheduleNext(newIdx + 1);
-                }
-              }}
-              className="btn-control"
-              title="Back 10 words"
+              onClick={() => setSpeedWPM(Math.max(100, speedWPM - 50))}
+              className="text-xs text-white/40 border border-white/10 rounded px-2 py-1 hover:text-white/70"
             >
-              Back
+              -
             </button>
-
-            {isPlaying ? (
-              <button onClick={pauseReading} className="btn-play-control">
-                Pause
-              </button>
-            ) : (
-              <button
-                onClick={isPaused ? resumeReading : startReading}
-                className="btn-play-control"
-              >
-                Play
-              </button>
-            )}
-
             <button
-              onClick={() => {
-                clearTimer();
-                const newIdx = Math.min(items.length - 1, currentIndex + 10);
-                setCurrentIndex(newIdx);
-                if (isPlaying) {
-                  scheduleNext(newIdx + 1);
-                }
-              }}
-              className="btn-control"
-              title="Forward 10 words"
+              onClick={() => setSpeedWPM(Math.min(1000, speedWPM + 50))}
+              className="text-xs text-white/40 border border-white/10 rounded px-2 py-1 hover:text-white/70"
             >
-              Skip
+              +
             </button>
-          </div>
-
-          {/* WPM control */}
-          <div className="flex items-center justify-center gap-4">
-            <span className="text-xs text-white/30 w-16 text-right">
-              {speedWPM} WPM
-            </span>
-            <input
-              type="range"
-              min="100"
-              max="1000"
-              step="25"
-              value={speedWPM}
-              onChange={(e) => setSpeedWPM(parseInt(e.target.value))}
-              className="wpm-slider flex-1 max-w-xs"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSpeedWPM(Math.max(100, speedWPM - 50))}
-                className="text-xs text-white/40 border border-white/10 rounded px-2 py-1 hover:text-white/70"
-              >
-                -
-              </button>
-              <button
-                onClick={() => setSpeedWPM(Math.min(1000, speedWPM + 50))}
-                className="text-xs text-white/40 border border-white/10 rounded px-2 py-1 hover:text-white/70"
-              >
-                +
-              </button>
-            </div>
           </div>
         </div>
       </div>
