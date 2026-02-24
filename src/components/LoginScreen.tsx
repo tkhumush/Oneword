@@ -22,8 +22,7 @@ export default function LoginScreen() {
     setError("");
     setLoading(true);
     try {
-      await connectNDK();
-      setConnected(true);
+      connectNDK();
 
       let user;
       switch (method) {
@@ -46,26 +45,20 @@ export default function LoginScreen() {
 
       await user.fetchProfile();
       setUser(user);
+      setConnected(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Login failed";
       setError(message);
+      setLoginMethod("choose");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleReadOnly() {
+  function handleReadOnly() {
     setError("");
-    setLoading(true);
-    try {
-      await connectNDK();
-      setConnected(true);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Connection failed";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
+    connectNDK();
+    setConnected(true);
   }
 
   if (loginMethod === "choose") {
