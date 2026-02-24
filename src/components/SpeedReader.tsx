@@ -166,7 +166,7 @@ export default function SpeedReader() {
   const touchActive = useRef(false);
   const wasPlayingBeforeTouch = useRef(false);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scrubThreshold = 25; // px per word
+  const scrubThreshold = 50; // px per word
 
   useEffect(() => {
     if (activeArticle) {
@@ -429,62 +429,68 @@ export default function SpeedReader() {
         />
       </div>
 
-      {/* Touch / display area */}
-      <div
-        className="flex-1 flex flex-col items-center justify-center px-6 select-none touch-none cursor-pointer touch-dots"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        {showImage ? (
-          <div className="flex flex-col items-center gap-8">
-            <img
-              src={showImage}
-              alt=""
-              className="max-w-full max-h-[50vh] rounded-lg"
-            />
-            <button onClick={skipImage} className="btn-skip">
-              Skip &rarr;
-            </button>
-          </div>
-        ) : !isPlaying && !isPaused ? (
-          <div className="flex flex-col items-center gap-6">
-            <h2 className="text-xl text-white/60 text-center leading-relaxed px-4">
-              {activeArticle.title}
-            </h2>
-            <p className="text-xs text-white/20">Touch or press space to start</p>
-          </div>
-        ) : (
-          <>
-            <div className="orp-container">
-              <div className="orp-focal-line" />
-              <ORPWord word={currentWord} />
+      {/* Reading area — touch zone underneath, display floats above */}
+      <div className="flex-1 relative">
+        {/* Touch zone (captures all gestures) */}
+        <div
+          className="absolute inset-0 touch-none touch-dots"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+        />
+
+        {/* Display layer (no pointer events — prevents text selection on long press) */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 pointer-events-none select-none">
+          {showImage ? (
+            <div className="flex flex-col items-center gap-8 pointer-events-auto">
+              <img
+                src={showImage}
+                alt=""
+                className="max-w-full max-h-[50vh] rounded-lg"
+              />
+              <button onClick={skipImage} className="btn-skip">
+                Skip &rarr;
+              </button>
             </div>
-
-            {/* Scrub direction indicator */}
-            {scrubbing && (
-              <p className="text-xs text-white/30 mt-4">
-                {scrubbing === "left" ? "\u25C0 rewinding" : "skipping \u25B6"}
-              </p>
-            )}
-
-            {/* Keyboard hint */}
-            {hint && (
-              <p className="text-xs text-white/30 mt-4">{hint}</p>
-            )}
-
-            {/* Context strip */}
-            <div className="mt-6">
-              <ContextStrip items={items} currentIndex={currentIndex} />
+          ) : !isPlaying && !isPaused ? (
+            <div className="flex flex-col items-center gap-6">
+              <h2 className="text-xl text-white/60 text-center leading-relaxed px-4">
+                {activeArticle.title}
+              </h2>
+              <p className="text-xs text-white/20">Touch or press space to start</p>
             </div>
+          ) : (
+            <>
+              <div className="orp-container">
+                <div className="orp-focal-line" />
+                <ORPWord word={currentWord} />
+              </div>
 
-            {/* Paused indicator */}
-            {isPaused && !scrubbing && (
-              <p className="text-xs text-white/20 mt-4">paused</p>
-            )}
-          </>
-        )}
+              {/* Scrub direction indicator */}
+              {scrubbing && (
+                <p className="text-xs text-white/30 mt-4">
+                  {scrubbing === "left" ? "\u25C0 rewinding" : "skipping \u25B6"}
+                </p>
+              )}
+
+              {/* Keyboard hint */}
+              {hint && (
+                <p className="text-xs text-white/30 mt-4">{hint}</p>
+              )}
+
+              {/* Context strip */}
+              <div className="mt-6">
+                <ContextStrip items={items} currentIndex={currentIndex} />
+              </div>
+
+              {/* Paused indicator */}
+              {isPaused && !scrubbing && (
+                <p className="text-xs text-white/20 mt-4">paused</p>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* WPM control */}
