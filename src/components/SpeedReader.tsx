@@ -318,7 +318,7 @@ export default function SpeedReader() {
       <div className="bg-black border-t border-white/10 px-4 py-5">
         <div className="max-w-2xl mx-auto">
           {/* Playback controls */}
-          <div className="flex items-center justify-center gap-6 mb-5">
+          <div className="grid grid-cols-3 gap-3 mb-5 max-w-xs mx-auto">
             <button
               onClick={() => {
                 clearTimer();

@@ -56,23 +56,23 @@ body {
 }
 
 .btn-play {
-  @apply px-8 py-4 border-2 border-white rounded-full text-white text-lg font-bold
-    hover:bg-white/10 active:bg-white/15 transition-colors;
+  @apply flex items-center justify-center aspect-square border border-white/15 rounded-xl text-white text-sm font-medium
+    hover:bg-white/5 active:bg-white/10 transition-colors w-24;
 }
 
 .btn-skip {
-  @apply px-6 py-3 border border-white/30 rounded-lg text-white text-sm font-medium
-    hover:bg-white/10 transition-colors;
+  @apply flex items-center justify-center aspect-square border border-white/15 rounded-xl text-white text-sm font-medium
+    hover:bg-white/5 active:bg-white/10 transition-colors;
 }
 
 .btn-play-control {
-  @apply w-16 h-16 flex items-center justify-center border-2 border-white rounded-full text-white text-xl
-    hover:bg-white/10 transition-colors;
+  @apply flex items-center justify-center aspect-square border border-white/15 rounded-xl text-white text-sm font-medium
+    hover:bg-white/5 active:bg-white/10 transition-colors;
 }
 
 .btn-control {
-  @apply w-12 h-12 flex items-center justify-center border border-white/20 rounded-full text-white/60 text-lg
-    hover:bg-white/5 hover:text-white transition-colors;
+  @apply flex items-center justify-center aspect-square border border-white/15 rounded-xl text-white text-sm font-medium
+    hover:bg-white/5 active:bg-white/10 transition-colors;
 }
 
 .btn-action {
