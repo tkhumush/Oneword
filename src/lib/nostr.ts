@@ -16,6 +16,7 @@ const RELAYS = [
 ];
 
 let ndkInstance: NDK | null = null;
+let relayReady: Promise<void> | null = null;
 
 export function getNDK(): NDK {
   if (!ndkInstance) {
@@ -28,10 +29,24 @@ export function getNDK(): NDK {
 
 export function connectNDK(): NDK {
   const ndk = getNDK();
-  // Don't await - NDK manages relay connections in the background.
-  // Subsequent operations (fetchEvents, publish) wait for available relays.
-  ndk.connect();
+  if (!relayReady) {
+    // Resolve as soon as the first relay is ready to serve requests,
+    // or after a 5 s safety timeout so the UI is never stuck forever.
+    relayReady = new Promise<void>((resolve) => {
+      const done = () => { resolve(); ndk.pool.off("relay:ready", done); };
+      ndk.pool.on("relay:ready", done);
+      setTimeout(resolve, 5000);
+    });
+    // Fire-and-forget: awaiting connect() blocks until ALL relays finish
+    // (or their own timeout), which previously caused the login hang.
+    ndk.connect();
+  }
   return ndk;
+}
+
+/** Wait until at least one relay is connected and ready. */
+export async function ensureRelayReady(): Promise<void> {
+  if (relayReady) await relayReady;
 }
 
 export async function loginWithExtension(): Promise<NDKUser> {
@@ -109,6 +124,7 @@ export async function fetchFollowingLongForm(
   limit = 10
 ): Promise<LongFormNote[]> {
   const ndk = getNDK();
+  await ensureRelayReady();
 
   // Fetch the user's contact list (kind 3)
   const contactListEvents = await ndk.fetchEvents({
