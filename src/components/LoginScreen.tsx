@@ -64,7 +64,7 @@ export default function LoginScreen() {
   if (loginMethod === "choose") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6">
-        <h1 className="text-4xl font-bold mb-2 tracking-tight">Oneword</h1>
+        <h1 className="text-4xl font-bold mb-2 tracking-tight">tl;sr</h1>
         <p className="text-white/50 mb-12 text-lg">
           Speed read nostr long-form content
         </p>
@@ -126,7 +126,7 @@ export default function LoginScreen() {
   if (loginMethod === "nsec" || loginMethod === "npub") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6">
-        <h1 className="text-4xl font-bold mb-2 tracking-tight">Oneword</h1>
+        <h1 className="text-4xl font-bold mb-2 tracking-tight">tl;sr</h1>
         <p className="text-white/50 mb-12 text-lg">
           Enter your {loginMethod}
         </p>
@@ -172,7 +172,7 @@ export default function LoginScreen() {
   // Extension / bunker loading state
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
-      <h1 className="text-4xl font-bold mb-2 tracking-tight">Oneword</h1>
+      <h1 className="text-4xl font-bold mb-2 tracking-tight">tl;sr</h1>
       <p className="text-white/50 mb-8">Connecting...</p>
       {error && (
         <div className="flex flex-col items-center gap-4">

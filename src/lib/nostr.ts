@@ -119,25 +119,6 @@ function parseLongFormEvent(event: NDKEvent): LongFormNote {
   };
 }
 
-export async function fetchLatestLongForm(limit = 10): Promise<LongFormNote[]> {
-  const ndk = getNDK();
-  await ensureRelayReady();
-
-  const filter: NDKFilter = {
-    kinds: [30023 as NDKKind],
-    limit,
-  };
-
-  const events = await ndk.fetchEvents(filter);
-  const notes = Array.from(events)
-    .map(parseLongFormEvent)
-    .filter((n) => n.content.length > 0)
-    .sort((a, b) => b.publishedAt - a.publishedAt)
-    .slice(0, limit);
-
-  return notes;
-}
-
 export async function fetchFollowingLongForm(
   user: NDKUser,
   limit = 10
