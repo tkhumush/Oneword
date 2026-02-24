@@ -91,6 +91,20 @@ body {
     hover:bg-white/5 active:bg-white/10 transition-colors;
 }
 
+/* Suppress all mobile touch highlights, callouts, and text selection */
+.no-touch-highlight {
+  -webkit-touch-callout: none; /* iOS: disable callout menu on long press */
+  -webkit-tap-highlight-color: transparent; /* remove tap highlight rectangle */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.no-touch-highlight * {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Touch area dot pattern */
 .touch-dots {
   background-image: radial-gradient(
