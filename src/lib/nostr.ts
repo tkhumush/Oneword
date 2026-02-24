@@ -104,21 +104,31 @@ function parseLongFormEvent(event: NDKEvent): LongFormNote {
   };
 }
 
-export async function fetchLatestLongForm(limit = 10): Promise<LongFormNote[]> {
+export async function fetchLatestLongForm(limit = 20): Promise<LongFormNote[]> {
   const ndk = getNDK();
   const filter: NDKFilter = {
     kinds: [30023 as NDKKind],
-    limit,
+    limit: limit * 3,
   };
 
   const events = await ndk.fetchEvents(filter);
   const notes = Array.from(events)
     .map(parseLongFormEvent)
-    .filter((n) => n.content.length > 0)
+    .filter((n) => n.content.length > 0);
+
+  // Deduplicate by author + identifier (d tag), keeping the newest version
+  const seen = new Map<string, LongFormNote>();
+  for (const note of notes) {
+    const key = `${note.pubkey}:${note.identifier}`;
+    const existing = seen.get(key);
+    if (!existing || note.publishedAt > existing.publishedAt) {
+      seen.set(key, note);
+    }
+  }
+
+  return Array.from(seen.values())
     .sort((a, b) => b.publishedAt - a.publishedAt)
     .slice(0, limit);
-
-  return notes;
 }
 
 export async function fetchFollowingLongForm(

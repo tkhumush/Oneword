@@ -40,7 +40,7 @@ export default function FeedView() {
   async function loadLatest() {
     setLoadingLatest(true);
     try {
-      const notes = await fetchLatestLongForm(10);
+      const notes = await fetchLatestLongForm(20);
       setLatestNotes(notes);
     } catch (e) {
       console.error("Failed to fetch latest:", e);
