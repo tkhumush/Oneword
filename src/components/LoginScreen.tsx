@@ -55,12 +55,6 @@ export default function LoginScreen() {
     }
   }
 
-  function handleReadOnly() {
-    setError("");
-    connectNDK();
-    setConnected(true);
-  }
-
   if (loginMethod === "choose") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -103,16 +97,6 @@ export default function LoginScreen() {
             className="btn-primary"
           >
             Login with Bunker (NIP-46)
-          </button>
-
-          <div className="border-t border-white/10 my-2" />
-
-          <button
-            onClick={handleReadOnly}
-            disabled={loading}
-            className="btn-secondary"
-          >
-            {loading ? "Connecting..." : "Browse without login"}
           </button>
         </div>
 
