@@ -26,6 +26,10 @@ interface AppState {
   // Loading state
   isLoadingFollowing: boolean;
   setLoadingFollowing: (loading: boolean) => void;
+
+  // Search
+  isSearching: boolean;
+  setSearching: (searching: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -47,4 +51,7 @@ export const useStore = create<AppState>((set) => ({
 
   isLoadingFollowing: false,
   setLoadingFollowing: (loading) => set({ isLoadingFollowing: loading }),
+
+  isSearching: false,
+  setSearching: (searching) => set({ isSearching: searching }),
 }));
