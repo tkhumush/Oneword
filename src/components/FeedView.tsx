@@ -14,6 +14,7 @@ export default function FeedView() {
     setLoadingFollowing,
     setUser,
     setConnected,
+    setSearching,
   } = useStore();
 
   useEffect(() => {
@@ -47,9 +48,17 @@ export default function FeedView() {
       <header className="sticky top-0 z-10 bg-black border-b border-white/10 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight">tl;sr</h1>
-          <button onClick={handleLogout} className="text-white/40 text-sm hover:text-white/70">
-            {user ? "Logout" : "Back"}
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSearching(true)}
+              className="text-white/40 text-sm hover:text-white/70"
+            >
+              Search
+            </button>
+            <button onClick={handleLogout} className="text-white/40 text-sm hover:text-white/70">
+              {user ? "Logout" : "Back"}
+            </button>
+          </div>
         </div>
       </header>
 
