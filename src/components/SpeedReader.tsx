@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { publishReaction, publishComment } from "@/lib/nostr";
 
@@ -149,9 +149,14 @@ export default function SpeedReader() {
     setSpeedWPM,
   } = useStore();
 
-  const [items, setItems] = useState<
-    (string | { type: "image"; url: string })[]
-  >([]);
+  // Derived from the article; SpeedReader only mounts with a non-null article.
+  const items = useMemo<(string | { type: "image"; url: string })[]>(
+    () =>
+      activeArticle
+        ? getAllWords(parseContentBlocks(activeArticle.content))
+        : [],
+    [activeArticle]
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -167,14 +172,6 @@ export default function SpeedReader() {
   const wasPlayingBeforeTouch = useRef(false);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrubThreshold = 50; // px per word
-
-  useEffect(() => {
-    if (activeArticle) {
-      const blocks = parseContentBlocks(activeArticle.content);
-      const allItems = getAllWords(blocks);
-      setItems(allItems);
-    }
-  }, [activeArticle]);
 
   // Keep refs in sync
   useEffect(() => {
@@ -198,36 +195,39 @@ export default function SpeedReader() {
   }, []);
 
   const scheduleNext = useCallback(
-    (idx: number) => {
-      if (idx >= items.length) {
-        setIsPlaying(false);
-        setIsFinished(true);
-        return;
-      }
-
-      const item = items[idx];
-
-      // If it's an image, pause
-      if (typeof item === "object" && item.type === "image") {
-        setCurrentIndex(idx);
-        setIsPlaying(false);
-        setIsPaused(true);
-        setShowImage(item.url);
-        return;
-      }
-
-      setCurrentIndex(idx);
-
-      // Calculate delay for this specific word (smart punctuation pausing)
-      const baseMs = 60000 / speedWPM;
-      const word = item as string;
-      const delay = baseMs * getWordDelay(word);
-
-      timerRef.current = setTimeout(() => {
-        if (isPlayingRef.current) {
-          scheduleNext(idx + 1);
+    (startIdx: number) => {
+      const step = (idx: number) => {
+        if (idx >= items.length) {
+          setIsPlaying(false);
+          setIsFinished(true);
+          return;
         }
-      }, delay);
+
+        const item = items[idx];
+
+        // If it's an image, pause
+        if (typeof item === "object" && item.type === "image") {
+          setCurrentIndex(idx);
+          setIsPlaying(false);
+          setIsPaused(true);
+          setShowImage(item.url);
+          return;
+        }
+
+        setCurrentIndex(idx);
+
+        // Calculate delay for this specific word (smart punctuation pausing)
+        const baseMs = 60000 / speedWPM;
+        const word = item as string;
+        const delay = baseMs * getWordDelay(word);
+
+        timerRef.current = setTimeout(() => {
+          if (isPlayingRef.current) {
+            step(idx + 1);
+          }
+        }, delay);
+      };
+      step(startIdx);
     },
     [items, speedWPM]
   );

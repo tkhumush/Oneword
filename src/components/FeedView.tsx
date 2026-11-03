@@ -17,13 +17,6 @@ export default function FeedView() {
     setSearching,
   } = useStore();
 
-  useEffect(() => {
-    if (user && followingNotes.length === 0) {
-      loadFollowing();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
   async function loadFollowing() {
     if (!user) return;
     setLoadingFollowing(true);
@@ -36,6 +29,13 @@ export default function FeedView() {
       setLoadingFollowing(false);
     }
   }
+
+  useEffect(() => {
+    if (user && followingNotes.length === 0) {
+      loadFollowing();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   function handleLogout() {
     setUser(null);
